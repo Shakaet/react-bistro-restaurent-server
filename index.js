@@ -33,6 +33,7 @@ async function run() {
 
     const database = client.db("Bistro-restaurant");
     const menuCollection = database.collection("menu");
+    const reviewCollection = database.collection("menu");
 
 
 
@@ -43,6 +44,12 @@ async function run() {
         
         res.send(result)
     })
+
+    app.get("/reviews",async(req,res)=>{
+      let result= await reviewCollection.find().toArray()
+      
+      res.send(result)
+  })
     // // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
