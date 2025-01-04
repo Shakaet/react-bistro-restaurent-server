@@ -13,7 +13,7 @@ app.get("/",async(req,res)=>{
 })
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.bnqcs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -35,9 +35,31 @@ async function run() {
     const menuCollection = database.collection("menu");
     const reviewCollection = database.collection("menu");
     const cartCollection = database.collection("carts");
+    const userCollection = database.collection("users");
 
 
+   app.post("/users",async(req,res)=>{
+    let data=req.body
 
+
+    // insert email if user doesnt exists:
+    // it can do this many ways (1.unique email, 2. upsert 3. simple checking)
+
+    let query={email:data.email}
+
+
+    let existingUser=await userCollection.findOne(query)
+
+    if(existingUser){
+      
+      return res.send({message:"user already existed",insertedId:null})
+    }
+    
+      const result = await userCollection.insertOne(data);
+      res.send(result)
+    
+    
+   })
 
 
     app.get("/menu",async(req,res)=>{
@@ -69,6 +91,16 @@ async function run() {
     let query={email}
 
     const result = await cartCollection.find(query).toArray();
+    res.send(result)
+  })
+
+
+  app.delete("/cart/:id",async(req,res)=>{
+
+    let idx=req.params.id
+
+    let query={_id:new ObjectId(idx)}
+    const result = await cartCollection.deleteOne(query);
     res.send(result)
   })
     // // Send a ping to confirm a successful connection
