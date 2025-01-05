@@ -3,9 +3,12 @@ const app=express()
 const cors = require('cors');
 const port=process.env.PORT ||5000
 require('dotenv').config()
+var jwt = require('jsonwebtoken');
 
 app.use(cors())
 app.use(express.json())  
+
+// require("crypto").randomBytes(64).toString("hex")
 
 
 app.get("/",async(req,res)=>{
@@ -36,6 +39,108 @@ async function run() {
     const reviewCollection = database.collection("menu");
     const cartCollection = database.collection("carts");
     const userCollection = database.collection("users");
+
+   
+
+    //jwt related APIs
+
+    app.post("/jwt",async(req,res)=>{
+
+      let user=req.body
+
+      let token= jwt.sign( user, process.env.JWT_TOKEN, { expiresIn: '1h' });
+
+      res.send({token})
+    })
+
+
+
+    let verifyToken=(req,res,next)=>{
+      console.log("inside middleware",req.headers.authorization)
+
+      if(!req.headers.authorization){
+
+        return res.status(401).send({message:"forbidden access"})
+
+      }
+
+      let token= req.headers.authorization.split(' ')[1]
+
+      jwt.verify(token, process.env.JWT_TOKEN, (err, decoded)=> {
+        if(err){
+          return res.status(401).send({message:"forbidden access"})
+        }
+
+        req.decoded=decoded
+        next()
+      });
+      // next()
+      
+    }
+
+    app.get("/users",verifyToken,async(req,res)=>{
+
+      // console.log(req.headers)
+
+      let result= await userCollection.find().toArray()
+      res.send(result)
+    })
+
+
+    //admin apis
+
+
+    app.get("/users/admin/:email",verifyToken,async(req,res)=>{
+
+      let email=req.params.email
+
+      if(email !== req.decoded.email){
+        return res.status(403).send({message:"unauthorized access"})
+      }
+
+      let query={email}
+      let user= await userCollection.findOne(query)
+
+      let admin=false
+      if(user){
+        admin= user?.role === "admin"
+      }
+
+      res.send({ admin })
+
+
+    })
+
+
+     ///   /users/:id dileo hoto
+
+    app.patch("/users/admin/:id",async(req,res)=>{
+
+      let idx= req.params.id
+
+      let filter={_id:new ObjectId(idx)}
+
+      const updateDoc = {
+        $set: {
+          role: "admin"
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result)
+    })
+
+    app.delete("/users/:id",async(req,res)=>{
+
+
+      let idx=req.params.id
+
+      let query={_id :new ObjectId(idx)}
+
+      let result=await userCollection.deleteOne(query)
+
+      res.send(result)
+    })
 
 
    app.post("/users",async(req,res)=>{
