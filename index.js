@@ -60,7 +60,7 @@ async function run() {
 
       if(!req.headers.authorization){
 
-        return res.status(401).send({message:"forbidden access"})
+        return res.status(401).send({message:"unauthorized access"})
 
       }
 
@@ -68,7 +68,7 @@ async function run() {
 
       jwt.verify(token, process.env.JWT_TOKEN, (err, decoded)=> {
         if(err){
-          return res.status(401).send({message:"forbidden access"})
+          return res.status(401).send({message:"unauthorized access"})
         }
 
         req.decoded=decoded
@@ -78,7 +78,28 @@ async function run() {
       
     }
 
-    app.get("/users",verifyToken,async(req,res)=>{
+
+    // use verify admin after verify token
+
+
+
+    let verifyAdmin=async(req,res,next)=>{
+
+      let email=req.decoded.email
+      let query={email}
+
+      let user= await userCollection.findOne(query)
+
+      let isAdmin=user?.role==="admin"
+
+      if(!isAdmin){
+        return res.status(403).send({message:"forbidden access"})
+      }
+      next()
+
+    }
+
+    app.get("/users",verifyToken,verifyAdmin,async(req,res)=>{
 
       // console.log(req.headers)
 
@@ -95,7 +116,7 @@ async function run() {
       let email=req.params.email
 
       if(email !== req.decoded.email){
-        return res.status(403).send({message:"unauthorized access"})
+        return res.status(403).send({message:"forbidden access"})
       }
 
       let query={email}
@@ -114,7 +135,7 @@ async function run() {
 
      ///   /users/:id dileo hoto
 
-    app.patch("/users/admin/:id",async(req,res)=>{
+    app.patch("/users/admin/:id",verifyToken,verifyAdmin,async(req,res)=>{
 
       let idx= req.params.id
 
@@ -130,7 +151,7 @@ async function run() {
       res.send(result)
     })
 
-    app.delete("/users/:id",async(req,res)=>{
+    app.delete("/users/:id",verifyToken,verifyAdmin,async(req,res)=>{
 
 
       let idx=req.params.id
