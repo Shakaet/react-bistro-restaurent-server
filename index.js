@@ -12,7 +12,7 @@ app.use(express.json())
 
 
   //install stripe
-  
+
 // npm install --save stripe
 
 // require("crypto").randomBytes(64).toString("hex")
@@ -46,6 +46,7 @@ async function run() {
     const reviewCollection = database.collection("review");
     const cartCollection = database.collection("carts");
     const userCollection = database.collection("users");
+    const paymentsCollection = database.collection("payments");
 
 
 
@@ -90,6 +91,35 @@ async function run() {
     res.send({
       clientSecret:paymentIntent.client_secret
     })
+  })
+
+  app.get("/payments/:email",async(req,res)=>{
+
+    let email=req.params.email
+    let query={email}
+
+    let result=await paymentsCollection.find(query).toArray()
+    res.send(result)
+
+  })
+
+  app.post("/payments",async(req,res)=>{
+
+    let paymentData=req.body
+    console.log(paymentData)
+
+
+    let intertedPayment=await paymentsCollection.insertOne(paymentData)
+
+
+    let query={_id:{
+      $in:paymentData.carts_id.map(id=>new ObjectId(id))
+    }}
+
+    let deleteCartItem=await cartCollection.deleteMany(query)
+
+    res.send({intertedPayment,deleteCartItem})
+
   })
 
 
